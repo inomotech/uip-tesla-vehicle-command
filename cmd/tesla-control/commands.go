@@ -491,6 +491,80 @@ var commands = map[string]*Command{
 			return car.ScheduleCharging(ctx, false, 0*time.Hour)
 		},
 	},
+    "departure-schedule": &Command{
+        help:             "Schedule departure to MINS minutes after midnight and enable preconditioning and off-peak charging",
+		requiresAuth:     true,
+		requiresFleetAPI: false,
+		args: []Argument{
+			Argument{name: "DEPART_MINS", help: "Departure time after midnight in minutes"},
+			Argument{name: "OFFPEAK_ENABLED", help: "Enable off-peak charging (true/false)"},
+			Argument{name: "OFFPEAK_WEEKDAYS", help: "Off-peak charging only on weekdays (true/false)"},
+			Argument{name: "PRECONDITION_ENABLED", help: "Enable preconditioning (true/false)"},
+			Argument{name: "PRECONDITION_WEEKDAYS", help: "Preconditioning only on weekdays (true/false)"},
+			Argument{name: "OFFPEAK_END_MINS", help: "End of off-peak charging time after midnight in minutes"},
+		},
+		handler: func(ctx context.Context, acct *account.Account, car *vehicle.Vehicle, args map[string]string) error {
+			departMins, err := strconv.Atoi(args["DEPART_MINS"])
+			if err != nil {
+				return fmt.Errorf("error parsing departure minutes: %v", err)
+			}
+			offPeakEndMins, err := strconv.Atoi(args["OFFPEAK_END_MINS"])
+			if err != nil {
+				return fmt.Errorf("error parsing off-peak end minutes: %v", err)
+			}
+
+			// Get preconditioning policy
+			preconditionEnabled, err := strconv.ParseBool(args["PRECONDITION_ENABLED"])
+			if err != nil {
+				return fmt.Errorf("error parsing preconditioning enabled: %v", err)
+			}
+			preconditionWeekdays, err := strconv.ParseBool(args["PRECONDITION_WEEKDAYS"])
+			if err != nil {
+				return fmt.Errorf("error parsing preconditioning weekdays: %v", err)
+			}
+			var preconditioningPolicy vehicle.ChargingPolicy
+			if preconditionWeekdays {
+				preconditioningPolicy = vehicle.ChargingPolicyWeekdays
+			} else if preconditionEnabled {
+				preconditioningPolicy = vehicle.ChargingPolicyAllDays
+			} else {
+				preconditioningPolicy = vehicle.ChargingPolicyOff
+			}
+
+			// Get off-peak policy
+			offPeakEnabled, err := strconv.ParseBool(args["OFFPEAK_ENABLED"])
+			if err != nil {
+				return fmt.Errorf("error parsing off-peak enabled: %v", err)
+			}
+			offPeakWeekdays, err := strconv.ParseBool(args["OFFPEAK_WEEKDAYS"])
+			if err != nil {
+				return fmt.Errorf("error parsing off-peak weekdays: %v", err)
+			}
+			var offPeakPolicy vehicle.ChargingPolicy
+			if offPeakWeekdays {
+				offPeakPolicy = vehicle.ChargingPolicyWeekdays
+			} else if offPeakEnabled {
+				offPeakPolicy = vehicle.ChargingPolicyAllDays
+			} else {
+				offPeakPolicy = vehicle.ChargingPolicyOff
+			}
+
+			// Convert minutes to time.Duration
+			departAt := time.Duration(departMins) * time.Minute
+			offPeakEndTime := time.Duration(offPeakEndMins) * time.Minute
+
+			return car.ScheduleDeparture(ctx, departAt, offPeakEndTime, preconditioningPolicy, offPeakPolicy)
+		},
+    },
+    "departure-schedule-cancel": &Command{
+        help:             "Clear the scheduled departure",
+        requiresAuth:     true,
+        requiresFleetAPI: false,
+        args:             []Argument{},
+        handler: func(ctx context.Context, acct *account.Account, car *vehicle.Vehicle, args map[string]string) error {
+            return car.ClearScheduledDeparture(ctx)
+        },
+    },
 	"media-set-volume": &Command{
 		help:             "Set volume",
 		requiresAuth:     true,

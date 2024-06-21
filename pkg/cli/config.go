@@ -103,6 +103,7 @@ const (
 	EnvTeslaKeyFile      = "TESLA_KEY_FILE"
 	EnvTeslaTokenName    = "TESLA_TOKEN_NAME"
 	EnvTeslaTokenFile    = "TESLA_TOKEN_FILE"
+	EnvTeslaTokenValue   = "TESLA_TOKEN_VALUE"
 	EnvTeslaVIN          = "TESLA_VIN"
 	EnvTeslaCacheFile    = "TESLA_CACHE_FILE"
 	EnvTeslaKeyringType  = "TESLA_KEYRING_TYPE"
@@ -139,6 +140,7 @@ type Config struct {
 	KeyringTokenName string // Username for OAuth token in system keyring
 	VIN              string
 	TokenFilename    string
+	TokenValue       string
 	KeyFilename      string
 	CacheFilename    string
 	Backend          keyring.Config
@@ -188,6 +190,7 @@ func (c *Config) RegisterCommandLineFlags() {
 	if c.Flags.isSet(FlagOAuth) {
 		flag.StringVar(&c.KeyringTokenName, "token-name", "", "System keyring `name` for OAuth token. Defaults to $TESLA_TOKEN_NAME.")
 		flag.StringVar(&c.TokenFilename, "token-file", "", "`File` containing OAuth token. Defaults to $TESLA_TOKEN_FILE.")
+		flag.StringVar(&c.TokenValue, "token", "", "`OAuth token. Defaults to $TESLA_TOKEN_VALUE.")
 	}
 	if c.Flags.isSet(FlagOAuth) || c.Flags.isSet(FlagPrivateKey) {
 		var names []string
@@ -244,12 +247,15 @@ func (c *Config) ReadFromEnvironment() {
 		}
 	}
 	if c.Flags.isSet(FlagOAuth) {
-		if c.KeyringTokenName == "" && c.TokenFilename == "" {
+		if c.KeyringTokenName == "" && c.TokenFilename == "" && c.TokenValue =="" {
 			c.KeyringTokenName = os.Getenv(EnvTeslaTokenName)
 			log.Debug("Set OAuth token name to '%s'", c.KeyringTokenName)
 
 			c.TokenFilename = os.Getenv(EnvTeslaTokenFile)
 			log.Debug("Set OAuth token file to '%s'", c.TokenFilename)
+
+			c.TokenValue = os.Getenv(EnvTeslaTokenValue)
+			log.Debug("Set OAuth token value to '%s'", c.TokenValue)
 		}
 	}
 	if c.Flags.isSet(FlagOAuth) || c.Flags.isSet(FlagPrivateKey) {
@@ -323,7 +329,7 @@ func (c *Config) PrivateKey() (skey protocol.ECDHPrivateKey, err error) {
 // connector.inet connection if a VIN was provided. If no token filename is set, c.VIN is required,
 // the account will be nil, and the vehicle will use a connector.ble connection.
 func (c *Config) Connect(ctx context.Context) (acct *account.Account, car *vehicle.Vehicle, err error) {
-	if c.VIN == "" && c.KeyringTokenName == "" && c.TokenFilename == "" {
+	if c.VIN == "" && c.KeyringTokenName == "" && c.TokenFilename == "" && c.TokenValue == "" {
 		return nil, nil, fmt.Errorf("must provide VIN and/or OAuth token")
 	}
 
@@ -341,7 +347,7 @@ func (c *Config) Connect(ctx context.Context) (acct *account.Account, car *vehic
 		log.Debug("Client public key: %02x", skey.PublicBytes())
 	}
 
-	if c.Flags.isSet(FlagOAuth) && (c.KeyringTokenName != "" || c.TokenFilename != "") {
+	if c.Flags.isSet(FlagOAuth) && (c.KeyringTokenName != "" || c.TokenFilename != "" || c.TokenValue != "") {
 		log.Debug("Required OAuth parameters supplied by CLI and/or environment. Connecting over the Internet...")
 		acct, car, err = c.ConnectRemote(ctx, skey)
 	} else if c.Flags.isSet(FlagBLE) && c.Flags.isSet(FlagVIN) {
@@ -397,6 +403,10 @@ func (c *Config) loadCache() error {
 
 func (c *Config) token() (string, error) {
 	if c.oauthToken != "" {
+		return c.oauthToken, nil
+	}
+    if c.TokenValue != "" {
+		c.oauthToken = c.TokenValue
 		return c.oauthToken, nil
 	}
 	var err error

@@ -405,7 +405,7 @@ func (c *Config) token() (string, error) {
 	if c.oauthToken != "" {
 		return c.oauthToken, nil
 	}
-    if c.TokenValue != "" {
+	if c.TokenValue != "" {
 		c.oauthToken = c.TokenValue
 		return c.oauthToken, nil
 	}

@@ -491,8 +491,8 @@ var commands = map[string]*Command{
 			return car.ScheduleCharging(ctx, false, 0*time.Hour)
 		},
 	},
-    "departure-schedule": &Command{
-        help:             "Schedule departure to MINS minutes after midnight and enable preconditioning and off-peak charging",
+	"departure-schedule": &Command{
+		help:             "Schedule departure to MINS minutes after midnight and enable preconditioning and off-peak charging",
 		requiresAuth:     true,
 		requiresFleetAPI: false,
 		args: []Argument{
@@ -555,16 +555,16 @@ var commands = map[string]*Command{
 
 			return car.ScheduleDeparture(ctx, departAt, offPeakEndTime, preconditioningPolicy, offPeakPolicy)
 		},
-    },
-    "departure-schedule-cancel": &Command{
-        help:             "Clear the scheduled departure",
-        requiresAuth:     true,
-        requiresFleetAPI: false,
-        args:             []Argument{},
-        handler: func(ctx context.Context, acct *account.Account, car *vehicle.Vehicle, args map[string]string) error {
+	},
+	"departure-schedule-cancel": &Command{
+		help:             "Clear the scheduled departure",
+		requiresAuth:     true,
+		requiresFleetAPI: false,
+		args:             []Argument{},
+		handler: func(ctx context.Context, acct *account.Account, car *vehicle.Vehicle, args map[string]string) error {
             return car.ClearScheduledDeparture(ctx)
-        },
-    },
+		},
+	},
 	"media-set-volume": &Command{
 		help:             "Set volume",
 		requiresAuth:     true,
